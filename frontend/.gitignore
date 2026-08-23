@@ -1,0 +1,13 @@
+# Frontend Git Ignore
+node_modules/
+.next/
+out/
+build/
+.env*.local
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+.vercel/
+.DS_Store

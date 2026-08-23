@@ -1,0 +1,202 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PaymentIntentState {
+  PENDING
+  POLICY_CHECK
+  RISK_CHECK
+  REVIEW_REQUIRED
+  AUTHORIZED
+  EXECUTING
+  SUCCEEDED
+  FAILED
+  BLOCKED
+}
+
+enum PolicyDecisionOutcome {
+  ALLOW
+  REVIEW
+  BLOCK
+}
+
+enum RiskLevel {
+  LOW
+  REVIEW
+  HIGH
+}
+
+model User {
+  id                String          @id @default(uuid())
+  email             String          @unique
+  name              String
+  dailyLimitPaise   Int             @default(500000) // ₹5,000.00
+  singleTxnLimitPaise Int           @default(400000) // ₹4,000.00
+  allowedCurrencies String[]        @default(["INR"])
+  policies          Policy[]
+  paymentIntents    PaymentIntent[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@map("users")
+}
+
+model Agent {
+  id          String            @id
+  name        String
+  description String
+  role        String
+  isActive    Boolean           @default(true)
+  permissions AgentPermission[]
+  intents     PaymentIntent[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("agents")
+}
+
+model AgentPermission {
+  id         String   @id @default(uuid())
+  agentId    String
+  agent      Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  permission String // e.g. "payment:create", "payment:read", "refund:create"
+  grantedAt  DateTime @default(now())
+
+  @@unique([agentId, permission])
+  @@map("agent_permissions")
+}
+
+model Policy {
+  id                             String   @id @default(uuid())
+  userId                         String
+  user                           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  maxTransactionAmountPaise      Int      @default(400000) // ₹4,000.00
+  dailyLimitPaise                Int      @default(500000) // ₹5,000.00
+  allowedCurrencies              String[] @default(["INR"])
+  allowedMerchants               String[] @default(["Nike", "Adidas", "Puma", "Amazon", "Flipkart", "Decathlon"])
+  blockedMerchants               String[] @default(["Suspicious Casino", "Darknet Store", "Untrusted Crypto Exchange"])
+  requireReviewAboveAmountPaise  Int?     @default(300000) // ₹3,000.00
+  maxVelocityPerMinute           Int      @default(5)
+  autoApproveWhitelistMerchants  Boolean  @default(false)
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+
+  @@map("policies")
+}
+
+model PaymentIntent {
+  id                 String              @id @default(uuid())
+  userId             String
+  user               User                @relation(fields: [userId], references: [id])
+  agentId            String
+  agent              Agent               @relation(fields: [agentId], references: [id])
+  state              PaymentIntentState  @default(PENDING)
+  amountPaise        Int
+  currency           String              @default("INR")
+  merchantName       String
+  merchantCategory   String?
+  rawPrompt          String
+  idempotencyKey     String              @unique
+  authorizationToken String?
+  policyDecisions    PolicyDecision[]
+  riskAssessments    RiskAssessment[]
+  transactions       Transaction[]
+  auditEvents        AuditEvent[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([state])
+  @@index([idempotencyKey])
+  @@map("payment_intents")
+}
+
+model PolicyDecision {
+  id              String                @id @default(uuid())
+  paymentIntentId String
+  paymentIntent   PaymentIntent         @relation(fields: [paymentIntentId], references: [id], onDelete: Cascade)
+  decision        PolicyDecisionOutcome
+  reason          String
+  evaluatedRules  Json // Array of PolicyRuleResult
+  createdAt       DateTime              @default(now())
+
+  @@index([paymentIntentId])
+  @@map("policy_decisions")
+}
+
+model RiskAssessment {
+  id              String        @id @default(uuid())
+  paymentIntentId String
+  paymentIntent   PaymentIntent @relation(fields: [paymentIntentId], references: [id], onDelete: Cascade)
+  overallScore    Int           @default(0) // 0-100
+  level           RiskLevel     @default(LOW)
+  signals         Json // Array of RiskSignal
+  explanation     String
+  createdAt       DateTime      @default(now())
+
+  @@index([paymentIntentId])
+  @@map("risk_assessments")
+}
+
+model Transaction {
+  id                  String        @id @default(uuid())
+  paymentIntentId     String
+  paymentIntent       PaymentIntent @relation(fields: [paymentIntentId], references: [id], onDelete: Cascade)
+  gateway             String        @default("mock") // "mock" | "razorpay"
+  providerPaymentId   String?
+  providerOrderId     String?
+  status              String // "SUCCEEDED" | "FAILED" | "PENDING" | "REQUIRES_REVIEW"
+  amountPaise         Int
+  currency            String        @default("INR")
+  idempotencyKey      String
+  rawProviderResponse Json?
+  errorMessage        String?
+  executedAt          DateTime      @default(now())
+
+  @@index([paymentIntentId])
+  @@index([idempotencyKey])
+  @@map("transactions")
+}
+
+model AuditEvent {
+  id              String         @id @default(uuid())
+  paymentIntentId String?
+  paymentIntent   PaymentIntent? @relation(fields: [paymentIntentId], references: [id], onDelete: SetNull)
+  eventType       String
+  actor           String
+  agentId         String?
+  requestId       String
+  decision        String?
+  reason          String?
+  metadata        Json           @default("{}")
+  checksum        String?
+  timestamp       DateTime       @default(now())
+
+  @@index([paymentIntentId])
+  @@index([requestId])
+  @@index([eventType])
+  @@map("audit_events")
+}
+
+model EvaluationRun {
+  id                   String   @id @default(uuid())
+  totalCases           Int
+  passedCases          Int
+  failedCases          Int
+  accuracyPercentage   Float
+  blockRatePercentage  Float
+  allowRatePercentage  Float
+  reviewRatePercentage Float
+  confusionMatrix      Json
+  shipGatePassed       Boolean
+  durationMs           Int
+  executedAt           DateTime @default(now())
+
+  @@map("evaluation_runs")
+}
