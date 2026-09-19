@@ -31,7 +31,6 @@ Autonomous AI agents (shopping concierges, enterprise procurement bots, cloud Fi
 ```
 TRADITIONAL COMMERCE (Human-Driven)
 Human ──► Browser ──► Checkout Form ──► OTP / 2FA ──► Razorpay Gateway ──► Bank Settlement
-[Characteristics: Slow (1-2 mins), Human Cognition, Visual Verification, Low Frequency]
 
 AGENTIC COMMERCE (AgentPay Standard)
 Autonomous AI ──► Scoped Token ──► Control Plane ──► Deterministic Rules ──► Razorpay API ──► Immutable Ledger
