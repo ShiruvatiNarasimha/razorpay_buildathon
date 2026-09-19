@@ -5,7 +5,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#)
 [![TypeScript: 5.x](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](#)
-[![Fastify: 5.x](https://img.shields.io/badge/Fastify-5.x-000000.svg)](#)
 [![Next.js: 16.x](https://img.shields.io/badge/Next.js-16.x-black.svg)](#)
 
 ---
