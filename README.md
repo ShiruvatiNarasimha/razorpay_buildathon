@@ -9,7 +9,6 @@
 [![Next.js: 16.x](https://img.shields.io/badge/Next.js-16.x-black.svg)](#)
 [![Gemini: 3.7 Flash](https://img.shields.io/badge/Gemini-3.7%20Flash-4285f4.svg)](#)
 [![Razorpay: Live Test API](https://img.shields.io/badge/Razorpay-Live%20API%20Verified-0c2340.svg)](#)
-[![Ship Gate: GO (100% Defense)](https://img.shields.io/badge/Ship%20Gate-GO%20(100%25%20Defense)-emerald.svg)](#)
 
 ---
 
